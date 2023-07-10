@@ -402,7 +402,7 @@ def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, list]):
 
     unique = get_unique_clink(url, bot_msg.chat.id)
     obj = res_msg.document or res_msg.video or res_msg.audio or res_msg.animation or res_msg.photo
-    redis.add_send_cache(unique, getattr(obj, "file_id", None))
+    # redis.add_send_cache(unique, getattr(obj, "file_id", None))
     redis.update_metrics("video_success")
     if ARCHIVE_ID and isinstance(vp_or_fid, pathlib.Path):
         client.forward_messages(bot_msg.chat.id, ARCHIVE_ID, res_msg.message_id)
@@ -438,9 +438,12 @@ def gen_cap(bm, url, video_path):
     else:
         remain = ""
     worker = get_dl_source()
+    # 去掉文件尾缀
+    file_name_without_extension = os.path.splitext(file_name)[0]
     cap = (
-        f"{user_info}\n{file_name}\n\n{url}\n\nInfo: {meta['width']}x{meta['height']} {file_size}\t"
-        f"{meta['duration']}s\n{remain}\n{worker}\n{bot_text.custom_text}"
+            f"{file_name_without_extension}\n\n{url}\t"
+      #  f"{user_info}\n{file_name}\n\n{url}\n\nInfo: {meta['width']}x{meta['height']} {file_size}\t"
+       # f"{meta['duration']}s\n{remain}\n{worker}\n{bot_text.custom_text}"
     )
     return cap, meta
 
