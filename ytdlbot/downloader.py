@@ -171,8 +171,10 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
         ]
     formats = [
         # webm , vp9 and av01 are not streamable on telegram, so we'll extract mp4 and not av01 codec
-        "bestvideo[ext=mp4][vcodec!*=av01][vcodec!*=vp09]+bestaudio[ext=m4a]/bestvideo+bestaudio",
-        "bestvideo[vcodec^=avc]+bestaudio[acodec^=mp4a]/best[vcodec^=avc]/best",
+        # webm and av01 are not streamable on telegram, so we'll extract mp4 and not av01 codec
+        # "bestvideo[ext=mp4][vcodec!*=av01]+bestaudio[ext=m4a]/bestvideo+bestaudio",
+        # "bestvideo[vcodec^=avc]+bestaudio[acodec^=mp4a]/best[vcodec^=avc]/best",
+        "best[ext!=webm]+bestaudio/best", 
         None,
     ]
     adjust_formats(chat_id, url, formats, hijack)
@@ -182,6 +184,12 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
     address = ["::", "0.0.0.0"] if IPv6 else [None]
     error = None
     video_paths = None
+    
+    # Determine if the link is a Twitter link.
+    if "twitter.com" in url:
+        cookies_path = "/app/conf/cookies.txt"
+        ydl_opts["cookiefile"] = cookies_path
+        
     for format_ in formats:
         ydl_opts["format"] = format_
         for addr in address:
