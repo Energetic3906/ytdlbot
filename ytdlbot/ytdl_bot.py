@@ -246,9 +246,6 @@ def direct_handler(client: Client, message: types.Message):
     direct_download_entrance(client, bot_msg, url)
 
 
-
-
-
 @app.on_message(filters.command(["settings"]))
 def settings_handler(client: Client, message: types.Message):
     chat_id = message.chat.id
