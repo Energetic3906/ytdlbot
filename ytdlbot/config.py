@@ -18,8 +18,7 @@ TOKEN = os.getenv("TOKEN", "1234")
 
 REDIS = os.getenv("REDIS", "redis")
 
-TG_MAX_SIZE = 20000 * 1024 * 1024
-# TG_MAX_SIZE = 10 * 1024 * 1024
+TG_MAX_SIZE = 4000 * 1024 * 1024
 
 EXPIRE = 24 * 3600
 
@@ -58,10 +57,11 @@ PROVIDER_TOKEN = os.getenv("PROVIDER_TOKEN") or "1234"
 PLAYLIST_SUPPORT = os.getenv("PLAYLIST_SUPPORT", False)
 ENABLE_ARIA2 = os.getenv("ENABLE_ARIA2", False)
 
-FREE_DOWNLOAD = os.getenv("FREE_DOWNLOAD", 2000)
+FREE_DOWNLOAD = os.getenv("FREE_DOWNLOAD", 4000)
 TOKEN_PRICE = os.getenv("BUY_UNIT", 20)  # one USD=20 credits
 
 RATE_LIMIT = os.getenv("RATE_LIMIT", 20)
 
-DSN = os.getenv("DSN")
+
 SS_YOUTUBE = os.getenv("SS_YOUTUBE", "https://ytdlbot.dmesg.app?token=123456")
+RCLONE_PATH = os.getenv("RCLONE")
