@@ -265,9 +265,6 @@ async def ytdl_normal_download(client: Client, bot_msg: typing.Union[types.Messa
 
     video_paths = await ytdl_download(url, temp_dir.name, bot_msg)
     logging.info("Download complete.")
-    # user = await client.get_me()
-    # logging.info("ytdl_normal_download user: %s",user)
-    # user.is_premium = True
     await client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_DOCUMENT)
     await bot_msg.edit_text("Download complete. Sending now...")
     try:
@@ -315,10 +312,6 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
     # if is str, it's a file id; else it's a list of paths
     payment = Payment()
     chat_id = bot_msg.chat.id
-    # user = await client.get_me()
-    # logging.info("upload_processor user: %s",user)
-    # user.is_premium = True
-    # logging.info("user-setting-premium: %s",user)
     
     markup = gen_video_markup()
     if isinstance(vp_or_fid, list) and len(vp_or_fid) > 1:

@@ -28,7 +28,7 @@ from pyrogram.raw import functions
 from pyrogram.raw import types as raw_types
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from tgbot_ping import get_runtime
-
+from config import PREMIUM
 from channel import Channel
 from client_init import create_app
 from config import (
@@ -59,7 +59,11 @@ customize_logger(["pyrogram.client", "pyrogram.session.session", "pyrogram.conne
 logging.getLogger("apscheduler.executors.default").propagate = False
 
 session = "ytdl-main"
-app = create_app(session)
+if PREMIUM:
+    app_user = Client("my_account")
+    app = Client(session)
+else:
+    app = create_app(session)
 
 logging.info("Authorized users are %s", AUTHORIZED_USER)
 redis = Redis()
@@ -435,7 +439,10 @@ async def download_handler(client: Client, message: types.Message):
             time.sleep(e.x)
         await client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_VIDEO)
         bot_msg.chat = message.chat
-        await ytdl_download_entrance(client, bot_msg, url)
+        if PREMIUM:
+            await ytdl_download_entrance(app_user, bot_msg, url)
+        else:
+            await ytdl_download_entrance(client, bot_msg, url)
 
 
 @app.on_callback_query(filters.regex(r"document|video|audio"))
@@ -536,4 +543,8 @@ By @BennyThink, VIP mode: {ENABLE_VIP}, Celery Mode: {ENABLE_CELERY}
 Version: {get_revision()}
     """
     print(banner)
-    app.run()
+    if PREMIUM:
+        app_user.start()
+        app.run()
+    else:
+        app.run()
