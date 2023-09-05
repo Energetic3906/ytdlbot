@@ -28,7 +28,7 @@ from pyrogram.raw import functions
 from pyrogram.raw import types as raw_types
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from tgbot_ping import get_runtime
-from config import PREMIUM
+from config import PREMIUM, PYRO_WORKERS
 from channel import Channel
 from client_init import create_app
 from config import (
@@ -60,8 +60,8 @@ logging.getLogger("apscheduler.executors.default").propagate = False
 
 session = "ytdl-main"
 if PREMIUM:
-    app_user = Client("my_account")
-    app = Client(session)
+    app_user = Client("my_account", workers=PYRO_WORKERS)
+    app = Client(session, workers=PYRO_WORKERS)
 else:
     app = create_app(session)
 
