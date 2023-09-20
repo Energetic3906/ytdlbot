@@ -28,7 +28,6 @@ from pyrogram.raw import functions
 from pyrogram.raw import types as raw_types
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from tgbot_ping import get_runtime
-from config import PREMIUM, PYRO_WORKERS
 from channel import Channel
 from client_init import create_app
 from config import (
@@ -41,6 +40,8 @@ from config import (
     PROVIDER_TOKEN,
     REQUIRED_MEMBERSHIP,
     TOKEN_PRICE,
+    PREMIUM,
+    PYRO_WORKERS,
 )
 from constant import BotText
 from database import InfluxDB, MySQL, Redis
@@ -76,7 +77,7 @@ async def private_use(func):
         chat_id = getattr(message.from_user, "id", None)
 
         # message type check
-        if message.chat.type != "private" and not message.text.lower().startswith("/ytdl"):
+        if message.chat.type != enums.ChatType.PRIVATE and not message.text.lower().startswith("/ytdl"):
             logging.debug("%s, it's annoying me...🙄️ ", message.text)
             return
 
@@ -118,10 +119,6 @@ async def private_use(func):
 async def start_handler(client: Client, message: types.Message):
     payment = Payment()
     from_id = message.from_user.id
-    # user = client.get_me()
-    # logging.info("user: %s",user)
-    # user.is_premium = True
-    # logging.info("user-setting-premium: %s",user)
     logging.info("Welcome to youtube-dl bot!")
     await client.send_chat_action(from_id, enums.ChatAction.TYPING)
     is_old_user = payment.check_old_user(from_id)
@@ -132,8 +129,6 @@ async def start_handler(client: Client, message: types.Message):
         info = f"Free token: {free_token}, Pay token: {pay_token}, Reset: {reset}"
     else:
         info = ""
-    # user=create_user(from_id, True)
-    # info = f"User {user.id} is or not premium? {user.is_premium}"
 
     text = f"{BotText.start}\n\n{info}\n{BotText.custom_text}"
     await client.send_message(message.chat.id, text)
@@ -426,17 +421,17 @@ async def download_handler(client: Client, message: types.Message):
         try:
             # raise pyrogram.errors.exceptions.FloodWait(10)
             bot_msg: typing.Union[types.Message, typing.Coroutine] = await message.reply_text(text, quote=True)
-        except pyrogram.errors.Flood as e:
+        except pyrogram.errors.FloodWait as e:
             f = BytesIO()
             f.write(str(e).encode())
             f.write(b"Your job will be done soon. Just wait! Don't rush.")
             f.name = "Please don't flood me.txt"
             bot_msg = await message.reply_document(
-                f, caption=f"Flood wait! Please wait {e.x} seconds...." f"Your job will start automatically", quote=True
+                f, caption=f"Flood wait! Please wait {e.value} seconds...." f"Your job will start automatically", quote=True
             )
             f.close()
-            await client.send_message(OWNER, f"Flood wait! 🙁 {e.x} seconds....")
-            time.sleep(e.x)
+            await client.send_message(OWNER, f"Flood wait! 🙁 {e.value} seconds....")
+            time.sleep(e.value)
         await client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_VIDEO)
         bot_msg.chat = message.chat
         if PREMIUM:
@@ -543,6 +538,7 @@ By @BennyThink, VIP mode: {ENABLE_VIP}, Celery Mode: {ENABLE_CELERY}
 Version: {get_revision()}
     """
     print(banner)
+    logging.info("PREMIUM is %s", PREMIUM)
     if PREMIUM:
         app_user.start()
         app.run()

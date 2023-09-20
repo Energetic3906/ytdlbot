@@ -12,17 +12,21 @@ import inspect as pyinspect
 import logging
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import tempfile
 import time
 import uuid
+from datetime import datetime
 
 import coloredlogs
 import ffmpeg
 import psutil
 
 from flower_tasks import app
+
+from config import TMPFILE_PATH
 
 inspect = app.control.inspect()
 
@@ -189,6 +193,21 @@ class Detector:
     #         logging.warning("Potential crash detected by %s, it's time to commit suicide...", self.func_name())
     #         return True
 
+    def fail_connect_detector(self):
+        # TODO: don't know why sometimes it stops connected to DC
+        last_line = self.logs.strip().split("\n")[-1]
+        try:
+            log_time_str = re.findall(r"\[(.*),", last_line)[0]
+            log_time = datetime.strptime(log_time_str, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return
+
+        time_difference = (datetime.now() - log_time).total_seconds()
+
+        if ("Sending as video" in last_line or "PingTask started" in last_line) and time_difference > 60:
+            logging.warning("Can't connect to Telegram DC")
+            return True
+
 
 def auto_restart():
     log_path = "/var/log/ytdl.log"
@@ -202,14 +221,14 @@ def auto_restart():
     for method in method_list:
         if method():
             logging.critical("Bye bye world!☠️")
-            for item in pathlib.Path(tempfile.gettempdir()).glob("ytdl-*"):
+            for item in pathlib.Path(TMPFILE_PATH or tempfile.gettempdir()).glob("ytdl-*"):
                 shutil.rmtree(item, ignore_errors=True)
 
             psutil.Process().kill()
 
 
 def clean_tempfile():
-    for item in pathlib.Path(tempfile.gettempdir()).glob("ytdl-*"):
+    for item in pathlib.Path(TMPFILE_PATH or tempfile.gettempdir()).glob("ytdl-*"):
         if time.time() - item.stat().st_ctime > 3600:
             shutil.rmtree(item, ignore_errors=True)
 

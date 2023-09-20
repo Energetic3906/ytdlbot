@@ -66,3 +66,4 @@ RATE_LIMIT = os.getenv("RATE_LIMIT", 20)
 
 SS_YOUTUBE = os.getenv("SS_YOUTUBE", "https://ytdlbot.dmesg.app?token=123456")
 RCLONE_PATH = os.getenv("RCLONE")
+TMPFILE_PATH = os.getenv("TMPFILE")
