@@ -72,7 +72,7 @@ channel = Channel()
 
 
 
-async def private_use(func):
+def private_use(func):
     async def wrapper(client: Client, message: types.Message):
         chat_id = getattr(message.from_user, "id", None)
 
@@ -110,7 +110,7 @@ async def private_use(func):
                 await message.reply_text(BotText.membership_require, quote=True)
                 return
 
-        return func(client, message)
+        return await func(client, message)
 
     return wrapper
 
@@ -372,7 +372,7 @@ def link_checker(url: str) -> str:
 
 
 @app.on_message(filters.incoming & (filters.text | filters.document))
-# @private_use
+@private_use
 async def download_handler(client: Client, message: types.Message):
     payment = Payment()
     chat_id = message.from_user.id

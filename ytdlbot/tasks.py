@@ -289,12 +289,6 @@ async def ytdl_normal_download(client: Client, bot_msg: typing.Union[types.Messa
             logging.info("Copying %s to %s", item, RCLONE_PATH)
             shutil.copy(os.path.join(temp_dir.name, item), RCLONE_PATH)
 
-    # setup rclone environment var to back up the downloaded file
-    if RCLONE_PATH:
-        for item in os.listdir(temp_dir.name):
-            logging.info("Copying %s to %s", item, RCLONE_PATH)
-            shutil.copy(os.path.join(temp_dir.name, item), RCLONE_PATH)
-
     temp_dir.cleanup()
 
 
