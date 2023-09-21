@@ -7,7 +7,7 @@
 
 __author__ = "Benny <benny.think@gmail.com>"
 
-import asyncio
+
 import logging
 import math
 import os
@@ -78,20 +78,20 @@ bot = create_app("ytdl-celery")
 
 
 
-async def get_messages(chat_id, message_id):
+def get_messages(chat_id, message_id):
     try:
-        return await bot.get_messages(chat_id, message_id)
+        return bot.get_messages(chat_id, message_id)
     except ConnectionError as e:
         logging.critical("WTH!!! %s", e)
         bot.start()
-        return await bot.get_messages(chat_id, message_id)
+        return bot.get_messages(chat_id, message_id)
 
 
 @app.task(rate_limit=f"{RATE_LIMIT}/m")
-async def ytdl_download_task(chat_id, message_id, url: str):
+def ytdl_download_task(chat_id, message_id, url: str):
     logging.info("YouTube celery tasks started for %s", url)
     bot_msg = get_messages(chat_id, message_id)
-    await ytdl_normal_download(bot, bot_msg, url)
+    ytdl_normal_download(bot, bot_msg, url)
     logging.info("YouTube celery tasks ended.")
 
 
@@ -116,14 +116,14 @@ def get_unique_clink(original_url: str, user_id: int):
 
 
 @app.task()
-async def direct_download_task(chat_id, message_id, url):
+def direct_download_task(chat_id, message_id, url):
     logging.info("Direct download celery tasks started for %s", url)
     bot_msg = get_messages(chat_id, message_id)
-    await direct_normal_download(bot, bot_msg, url)
+    direct_normal_download(bot, bot_msg, url)
     logging.info("Direct download celery tasks ended.")
 
 
-async def forward_video(client, bot_msg, url: str):
+def forward_video(client, bot_msg, url: str):
     chat_id = bot_msg.chat.id
     unique = get_unique_clink(url, chat_id)
     cached_fid = redis.get_send_cache(unique)
@@ -131,39 +131,39 @@ async def forward_video(client, bot_msg, url: str):
         redis.update_metrics("cache_miss")
         return False
 
-    res_msg: "Message" = await upload_processor(client, bot_msg, url, cached_fid)
+    res_msg: "Message" = upload_processor(client, bot_msg, url, cached_fid)
     obj = res_msg.document or res_msg.video or res_msg.audio or res_msg.animation or res_msg.photo
 
     caption, _ = gen_cap(bot_msg, url, obj)
-    await res_msg.edit_text(caption, reply_markup=gen_video_markup())
-    await bot_msg.edit_text(f"Download success!✅✅✅")
+    res_msg.edit_text(caption, reply_markup=gen_video_markup())
+    bot_msg.edit_text(f"Download success!✅✅✅")
     redis.update_metrics("cache_hit")
     return True
 
 
-async def ytdl_download_entrance(client: Client, bot_msg: types.Message, url: str, mode=None):
+def ytdl_download_entrance(client: Client, bot_msg: types.Message, url: str, mode=None):
     payment = Payment()
     chat_id = bot_msg.chat.id
     try:
-        if await forward_video(client, bot_msg, url):
+        if forward_video(client, bot_msg, url):
             return
         mode = mode or payment.get_user_settings(chat_id)[-1]
         if ENABLE_CELERY and mode in [None, "Celery"]:
             async_task(ytdl_download_task, chat_id, bot_msg.id, url)
             # ytdl_download_task.delay(chat_id, bot_msg.id, url)
         else:
-            await ytdl_normal_download(client, bot_msg, url)
+            ytdl_normal_download(client, bot_msg, url)
     except Exception as e:
         logging.error("Failed to download %s, error: %s", url, e)
-        await bot_msg.edit_text(f"Download failed!❌\n\n`{traceback.format_exc()[0:4000]}`", disable_web_page_preview=True)
+        bot_msg.edit_text(f"Download failed!❌\n\n`{traceback.format_exc()[0:4000]}`", disable_web_page_preview=True)
 
 
-async def direct_download_entrance(client: Client, bot_msg: typing.Union[types.Message, typing.Coroutine], url: str):
+def direct_download_entrance(client: Client, bot_msg: typing.Union[types.Message, typing.Coroutine], url: str):
     if ENABLE_CELERY:
-        await direct_normal_download(client, bot_msg, url)
+        direct_normal_download(client, bot_msg, url)
         # direct_download_task.delay(bot_msg.chat.id, bot_msg.id, url)
     else:
-        await direct_normal_download(client, bot_msg, url)
+        direct_normal_download(client, bot_msg, url)
 
 
 def audio_entrance(client, bot_msg):
@@ -174,7 +174,7 @@ def audio_entrance(client, bot_msg):
         normal_audio(client, bot_msg)
 
 
-async def direct_normal_download(client: Client, bot_msg: typing.Union[types.Message, typing.Coroutine], url: str):
+def direct_normal_download(client: Client, bot_msg: typing.Union[types.Message, typing.Coroutine], url: str):
     chat_id = bot_msg.chat.id
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
@@ -189,7 +189,7 @@ async def direct_normal_download(client: Client, bot_msg: typing.Union[types.Mes
     except TypeError:
         filename = getattr(req, "url", "").rsplit("/")[-1]
     except Exception as e:
-        await bot_msg.edit_text(f"Download failed!❌\n\n```{e}```", disable_web_page_preview=True)
+        bot_msg.edit_text(f"Download failed!❌\n\n```{e}```", disable_web_page_preview=True)
         return
 
     if not filename:
@@ -201,40 +201,40 @@ async def direct_normal_download(client: Client, bot_msg: typing.Union[types.Mes
         downloaded = 0
         for chunk in req.iter_content(1024 * 1024):
             text = tqdm_progress("Downloading...", length, downloaded)
-            await edit_text(bot_msg, text)
+            edit_text(bot_msg, text)
             with open(filepath, "ab") as fp:
                 fp.write(chunk)
             downloaded += len(chunk)
         logging.info("Downloaded file %s", filename)
         st_size = os.stat(filepath).st_size
 
-        await client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_DOCUMENT)
-        await client.send_document(
+        client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_DOCUMENT)
+        client.send_document(
             bot_msg.chat.id,
             filepath,
             caption=f"filesize: {sizeof_fmt(st_size)}",
             progress=upload_hook,
             progress_args=(bot_msg,),
         )
-        await bot_msg.edit_text("Download success!✅")
+        bot_msg.edit_text("Download success!✅")
 
 
-async def normal_audio(client: Client, bot_msg: typing.Union[types.Message, typing.Coroutine]):
+def normal_audio(client: Client, bot_msg: typing.Union[types.Message, typing.Coroutine]):
     chat_id = bot_msg.chat.id
     # fn = getattr(bot_msg.video, "file_name", None) or getattr(bot_msg.document, "file_name", None)
-    status_msg: typing.Union[types.Message, typing.Coroutine] = await bot_msg.reply_text(
+    status_msg: typing.Union[types.Message, typing.Coroutine] = bot_msg.reply_text(
         "Converting to audio...please wait patiently", quote=True
     )
     orig_url: str = re.findall(r"https?://.*", bot_msg.caption)[0]
     with tempfile.TemporaryDirectory(prefix="ytdl-", dir=TMPFILE_PATH) as tmp:
-        await client.send_chat_action(chat_id, enums.ChatAction.RECORD_AUDIO)
+        client.send_chat_action(chat_id, enums.ChatAction.RECORD_AUDIO)
         # just try to download the audio using yt-dlp
-        filepath = await ytdl_download(orig_url, tmp, status_msg, hijack="bestaudio[ext=m4a]")
-        await status_msg.edit_text("Sending audio now...")
-        await client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_AUDIO)
+        filepath = ytdl_download(orig_url, tmp, status_msg, hijack="bestaudio[ext=m4a]")
+        status_msg.edit_text("Sending audio now...")
+        client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_AUDIO)
         for f in filepath:
-            await client.send_audio(chat_id, f)
-        await status_msg.edit_text("✅ Conversion complete.")
+            client.send_audio(chat_id, f)
+        status_msg.edit_text("✅ Conversion complete.")
         Redis().update_metrics("audio_success")
 
 
@@ -245,43 +245,43 @@ def get_dl_source():
     return ""
 
 
-async def upload_transfer_sh(bm, paths: list) -> str:
+def upload_transfer_sh(bm, paths: list) -> str:
     d = {p.name: (md5(p.name.encode("utf8")).hexdigest() + p.suffix, p.open("rb")) for p in paths}
     monitor = MultipartEncoderMonitor(MultipartEncoder(fields=d), lambda x: upload_hook(x.bytes_read, x.len, bm))
     headers = {"Content-Type": monitor.content_type}
     try:
         req = requests.post("https://transfer.sh", data=monitor, headers=headers)
-        await bm.edit_text(f"Download success!✅")
+        bm.edit_text(f"Download success!✅")
         return re.sub(r"https://", "\nhttps://", req.text)
     except requests.exceptions.RequestException as e:
         return f"Upload failed!❌\n\n```{e}```"
 
 
-async def flood_owner_message(client, ex):
-    await client.send_message(OWNER, f"CRITICAL INFO: {ex}")
+def flood_owner_message(client, ex):
+    client.send_message(OWNER, f"CRITICAL INFO: {ex}")
 
 
-async def ytdl_normal_download(client: Client, bot_msg: typing.Union[types.Message, typing.Coroutine], url: str):
+def ytdl_normal_download(client: Client, bot_msg: typing.Union[types.Message, typing.Coroutine], url: str):
     chat_id = bot_msg.chat.id
     temp_dir = tempfile.TemporaryDirectory(prefix="ytdl-", dir=TMPFILE_PATH)
 
-    video_paths = await ytdl_download(url, temp_dir.name, bot_msg)
+    video_paths = ytdl_download(url, temp_dir.name, bot_msg)
     logging.info("Download complete.")
-    await client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_DOCUMENT)
-    await bot_msg.edit_text("Download complete. Sending now...")
+    client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_DOCUMENT)
+    bot_msg.edit_text("Download complete. Sending now...")
     try:
-        await upload_processor(client, bot_msg, url, video_paths)
+        upload_processor(client, bot_msg, url, video_paths)
     except pyrogram.errors.FloodWait as e:
         logging.critical("FloodWait from Telegram: %s", e)
-        await client.send_message(
+        client.send_message(
             chat_id,
             f"I'm being rate limited by Telegram. Your video will come after {e.value} seconds. Please wait patiently.",
         )
-        await flood_owner_message(client, e)
+        flood_owner_message(client, e)
         time.sleep(e.value)
-        await upload_processor(client, bot_msg, url, video_paths)
+        upload_processor(client, bot_msg, url, video_paths)
 
-    await bot_msg.edit_text("Download success!✅")
+    bot_msg.edit_text("Download success!✅")
 
     # setup rclone environment var to back up the downloaded file
     if RCLONE_PATH:
@@ -309,7 +309,7 @@ def generate_input_media(file_paths: list, cap: str) -> list:
     return input_media
 
 
-async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, list]):
+def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, list]):
     # raise pyrogram.errors.exceptions.FloodWait(13)
     # if is str, it's a file id; else it's a list of paths
     payment = Payment()
@@ -319,7 +319,7 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
     if isinstance(vp_or_fid, list) and len(vp_or_fid) > 1:
         # just generate the first for simplicity, send as media group(2-20)
         cap, meta = gen_cap(bot_msg, url, vp_or_fid[0])
-        res_msg = await client.send_media_group(chat_id, generate_input_media(vp_or_fid, cap))
+        res_msg = client.send_media_group(chat_id, generate_input_media(vp_or_fid, cap))
         logging.info("res_msg: %s", res_msg)
         # TODO no cache for now
         return res_msg[0]
@@ -339,7 +339,7 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
         logging.info("Sending as document")
         try:
             # send as document could be sent as video even if it's a document
-            res_msg = await client.send_document(
+            res_msg = client.send_document(
                 chat_id,
                 vp_or_fid,
                 caption=cap,
@@ -351,7 +351,7 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
             )
         except ValueError:
             logging.error("Retry to send as video")
-            res_msg = await client.send_video(
+            res_msg = client.send_video(
                 chat_id,
                 vp_or_fid,
                 supports_streaming=True,
@@ -363,7 +363,7 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
             )
     elif settings[2] == "audio":
         logging.info("Sending as audio")
-        res_msg = await client.send_audio(
+        res_msg = client.send_audio(
             chat_id,
             vp_or_fid,
             caption=cap,
@@ -374,7 +374,7 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
         # settings==video
         logging.info("Sending as video")
         try:
-            res_msg = await client.send_video(
+            res_msg = client.send_video(
                 chat_id,
                 vp_or_fid,
                 supports_streaming=True,
@@ -388,7 +388,7 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
             # try to send as annimation, photo
             try:
                 logging.warning("Retry to send as animation")
-                res_msg = await client.send_animation(
+                res_msg = client.send_animation(
                     chat_id,
                     vp_or_fid,
                     caption=cap,
@@ -400,7 +400,7 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
             except Exception:
                 # this is likely a photo
                 logging.warning("Retry to send as photo")
-                res_msg = await client.send_photo(
+                res_msg = client.send_photo(
                     chat_id,
                     vp_or_fid,
                     caption=cap,
@@ -413,7 +413,7 @@ async def upload_processor(client, bot_msg, url, vp_or_fid: typing.Union[str, li
     # redis.add_send_cache(unique, getattr(obj, "file_id", None))
     redis.update_metrics("video_success")
     if ARCHIVE_ID and isinstance(vp_or_fid, pathlib.Path):
-        await client.forward_messages(bot_msg.chat.id, ARCHIVE_ID, res_msg.id)
+        client.forward_messages(bot_msg.chat.id, ARCHIVE_ID, res_msg.id)
     return res_msg
 
 

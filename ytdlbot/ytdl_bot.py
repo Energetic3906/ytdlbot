@@ -17,7 +17,7 @@ import time
 import traceback
 import typing
 from io import BytesIO
-import asyncio
+
 import pyrogram.errors
 import requests
 import yt_dlp
@@ -73,7 +73,7 @@ channel = Channel()
 
 
 def private_use(func):
-    async def wrapper(client: Client, message: types.Message):
+    def wrapper(client: Client, message: types.Message):
         chat_id = getattr(message.from_user, "id", None)
 
         # message type check
@@ -88,12 +88,12 @@ def private_use(func):
             users = []
 
         if users and chat_id and chat_id not in users:
-            await message.reply_text(BotText.private, quote=True)
+            message.reply_text(BotText.private, quote=True)
             return
 
         if REQUIRED_MEMBERSHIP:
             try:
-                member: typing.Union[types.ChatMember, typing.Coroutine] = await app.get_chat_member(
+                member: typing.Union[types.ChatMember, typing.Coroutine] = app.get_chat_member(
                     REQUIRED_MEMBERSHIP, chat_id
                 )
                 if member.status not in [
@@ -107,20 +107,20 @@ def private_use(func):
                     logging.info("user %s check passed for group/channel %s.", chat_id, REQUIRED_MEMBERSHIP)
             except UserNotParticipant:
                 logging.warning("user %s is not a member of group/channel %s", chat_id, REQUIRED_MEMBERSHIP)
-                await message.reply_text(BotText.membership_require, quote=True)
+                message.reply_text(BotText.membership_require, quote=True)
                 return
 
-        return await func(client, message)
+        return func(client, message)
 
     return wrapper
 
 
 @app.on_message(filters.command(["start"]))
-async def start_handler(client: Client, message: types.Message):
+def start_handler(client: Client, message: types.Message):
     payment = Payment()
     from_id = message.from_user.id
     logging.info("Welcome to youtube-dl bot!")
-    await client.send_chat_action(from_id, enums.ChatAction.TYPING)
+    client.send_chat_action(from_id, enums.ChatAction.TYPING)
     is_old_user = payment.check_old_user(from_id)
     if is_old_user:
         info = ""
@@ -131,27 +131,27 @@ async def start_handler(client: Client, message: types.Message):
         info = ""
 
     text = f"{BotText.start}\n\n{info}\n{BotText.custom_text}"
-    await client.send_message(message.chat.id, text)
+    client.send_message(message.chat.id, text)
 
 
 @app.on_message(filters.command(["help"]))
-async def help_handler(client: Client, message: types.Message):
+def help_handler(client: Client, message: types.Message):
     chat_id = message.chat.id
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
-    await client.send_message(chat_id, BotText.help, disable_web_page_preview=True)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_message(chat_id, BotText.help, disable_web_page_preview=True)
 
 
 @app.on_message(filters.command(["about"]))
-async def about_handler(client: Client, message: types.Message):
+def about_handler(client: Client, message: types.Message):
     chat_id = message.chat.id
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
-    await client.send_message(chat_id, BotText.about)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_message(chat_id, BotText.about)
 
 
 @app.on_message(filters.command(["sub"]))
-async def subscribe_handler(client: Client, message: types.Message):
+def subscribe_handler(client: Client, message: types.Message):
     chat_id = message.chat.id
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
     if message.text == "/sub":
         result = channel.get_user_subscription(chat_id)
     else:
@@ -160,16 +160,16 @@ async def subscribe_handler(client: Client, message: types.Message):
             result = channel.subscribe_channel(chat_id, link)
         except (IndexError, ValueError):
             result = f"Error: \n{traceback.format_exc()}"
-    await client.send_message(chat_id, result or "You have no subscription.", disable_web_page_preview=True)
+    client.send_message(chat_id, result or "You have no subscription.", disable_web_page_preview=True)
 
 
 @app.on_message(filters.command(["unsub"]))
-async def unsubscribe_handler(client: Client, message: types.Message):
+def unsubscribe_handler(client: Client, message: types.Message):
     chat_id = message.chat.id
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
     text = message.text.split(" ")
     if len(text) == 1:
-        await client.send_message(chat_id, "/unsub channel_id", disable_web_page_preview=True)
+        client.send_message(chat_id, "/unsub channel_id", disable_web_page_preview=True)
         return
 
     rows = channel.unsubscribe_channel(chat_id, text[1])
@@ -177,83 +177,83 @@ async def unsubscribe_handler(client: Client, message: types.Message):
         text = f"Unsubscribed from {text[1]}"
     else:
         text = "Unable to find the channel."
-    await client.send_message(chat_id, text, disable_web_page_preview=True)
+    client.send_message(chat_id, text, disable_web_page_preview=True)
 
 
 @app.on_message(filters.command(["patch"]))
-async def patch_handler(client: Client, message: types.Message):
+def patch_handler(client: Client, message: types.Message):
     username = message.from_user.username
     chat_id = message.chat.id
     if username == OWNER:
         celery_app.control.broadcast("hot_patch")
-        await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
-        await client.send_message(chat_id, "Oorah!")
+        client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+        client.send_message(chat_id, "Oorah!")
         hot_patch()
 
 
 @app.on_message(filters.command(["uncache"]))
-async def uncache_handler(client: Client, message: types.Message):
+def uncache_handler(client: Client, message: types.Message):
     username = message.from_user.username
     link = message.text.split()[1]
     if username == OWNER:
         count = channel.del_cache(link)
-        await message.reply_text(f"{count} cache(s) deleted.", quote=True)
+        message.reply_text(f"{count} cache(s) deleted.", quote=True)
 
 
 @app.on_message(filters.command(["purge"]))
-async def purge_handler(client: Client, message: types.Message):
+def purge_handler(client: Client, message: types.Message):
     username = message.from_user.username
     if username == OWNER:
-        await message.reply_text(purge_tasks(), quote=True)
+        message.reply_text(purge_tasks(), quote=True)
 
 
 @app.on_message(filters.command(["ping"]))
-async def ping_handler(client: Client, message: types.Message):
+def ping_handler(client: Client, message: types.Message):
     chat_id = message.chat.id
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
     if os.uname().sysname == "Darwin" or ".heroku" in os.getenv("PYTHONHOME", ""):
         bot_info = "ping unavailable."
     else:
         bot_info = get_runtime("ytdlbot_ytdl_1", "YouTube-dl")
     if message.chat.username == OWNER:
         stats = BotText.ping_worker()[:1000]
-        await client.send_document(chat_id, redis.generate_file(), caption=f"{bot_info}\n\n{stats}")
+        client.send_document(chat_id, redis.generate_file(), caption=f"{bot_info}\n\n{stats}")
     else:
-        await client.send_message(chat_id, f"{bot_info.split('CPU')[0]}")
+        client.send_message(chat_id, f"{bot_info.split('CPU')[0]}")
 
 
 @app.on_message(filters.command(["sub_count"]))
-async def sub_count_handler(client: Client, message: types.Message):
+def sub_count_handler(client: Client, message: types.Message):
     username = message.from_user.username
     chat_id = message.chat.id
     if username == OWNER:
         with BytesIO() as f:
             f.write(channel.sub_count().encode("u8"))
             f.name = "subscription count.txt"
-            await client.send_document(chat_id, f)
+            client.send_document(chat_id, f)
 
 
 @app.on_message(filters.command(["direct"]))
-async def direct_handler(client: Client, message: types.Message):
+def direct_handler(client: Client, message: types.Message):
     chat_id = message.from_user.id
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
     url = re.sub(r"/direct\s*", "", message.text)
     logging.info("direct start %s", url)
     if not re.findall(r"^https?://", url.lower()):
         redis.update_metrics("bad_request")
-        await message.reply_text("Send me a DIRECT LINK.", quote=True)
+        message.reply_text("Send me a DIRECT LINK.", quote=True)
         return
 
-    bot_msg = await message.reply_text("Request received.", quote=True)
+    bot_msg = message.reply_text("Request received.", quote=True)
     redis.update_metrics("direct_request")
-    await direct_download_entrance(client, bot_msg, url)
+    direct_download_entrance(client, bot_msg, url)
 
 
 @app.on_message(filters.command(["settings"]))
-async def settings_handler(client: Client, message: types.Message):
+def settings_handler(client: Client, message: types.Message):
     chat_id = message.chat.id
     payment = Payment()
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
     data = MySQL().get_user_settings(chat_id)
     set_mode = data[-1]
     text = {"Local": "Celery", "Celery": "Local"}.get(set_mode, "Local")
@@ -280,20 +280,20 @@ async def settings_handler(client: Client, message: types.Message):
     )
 
     try:
-        await client.send_message(chat_id, BotText.settings.format(data[1], data[2]) + mode_text, reply_markup=markup)
+        client.send_message(chat_id, BotText.settings.format(data[1], data[2]) + mode_text, reply_markup=markup)
     except:
-        await client.send_message(
+        client.send_message(
             chat_id, BotText.settings.format(data[1] + ".", data[2] + ".") + mode_text, reply_markup=markup
         )
 
 
 @app.on_message(filters.command(["buy"]))
-async def buy_handler(client: Client, message: types.Message):
+def buy_handler(client: Client, message: types.Message):
     # process as chat.id, not from_user.id
     chat_id = message.chat.id
     text = message.text.strip()
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
-    await client.send_message(chat_id, BotText.buy, disable_web_page_preview=True)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_message(chat_id, BotText.buy, disable_web_page_preview=True)
     # generate telegram invoice here
     payload = f"{message.chat.id}-buy"
     token_count = message.text.replace("/buy", "").strip()
@@ -314,17 +314,17 @@ async def buy_handler(client: Client, message: types.Message):
             message="Buy more download token",
         )
     )
-    await client.send_message(chat_id, "In /settings, change your download mode to Local will make the download faster!")
+    client.send_message(chat_id, "In /settings, change your download mode to Local will make the download faster!")
 
 
 @app.on_message(filters.command(["redeem"]))
-async def redeem_handler(client: Client, message: types.Message):
+def redeem_handler(client: Client, message: types.Message):
     payment = Payment()
     chat_id = message.chat.id
     text = message.text.strip()
     unique = text.replace("/redeem", "").strip()
     msg = payment.verify_payment(chat_id, unique)
-    await message.reply_text(msg, quote=True)
+    message.reply_text(msg, quote=True)
 
 
 def generate_invoice(amount: int, title: str, description: str, payload: str):
@@ -373,15 +373,15 @@ def link_checker(url: str) -> str:
 
 @app.on_message(filters.incoming & (filters.text | filters.document))
 @private_use
-async def download_handler(client: Client, message: types.Message):
+def download_handler(client: Client, message: types.Message):
     payment = Payment()
     chat_id = message.from_user.id
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+    client.send_chat_action(chat_id, enums.ChatAction.TYPING)
     redis.user_count(chat_id)
     if message.document:
         with tempfile.NamedTemporaryFile(mode="r+") as tf:
             logging.info("Downloading file to %s", tf.name)
-            await message.download(tf.name, block=True)
+            message.download(tf.name, block=True)
             # contents = open(tf.name, "r").read()  # don't know why
             tf.seek(0)
             contents = tf.read().decode()
@@ -395,11 +395,11 @@ async def download_handler(client: Client, message: types.Message):
         if not re.findall(r"^https?://", url.lower()):
             redis.update_metrics("bad_request")
             text = search(url)
-            await message.reply_text(text, quote=True)
+            message.reply_text(text, quote=True)
             return
 
         if text := link_checker(url):
-            await message.reply_text(text, quote=True)
+            message.reply_text(text, quote=True)
             redis.update_metrics("reject_link_checker")
             return
 
@@ -407,7 +407,7 @@ async def download_handler(client: Client, message: types.Message):
         if ENABLE_VIP and not payment.check_old_user(chat_id):
             free, pay, reset = payment.get_token(chat_id)
             if free + pay <= 0:
-                await message.reply_text(
+                message.reply_text(
                     f"You don't have enough token. Please wait until {reset} or /buy more token.", quote=True
                 )
                 redis.update_metrics("reject_token")
@@ -420,24 +420,24 @@ async def download_handler(client: Client, message: types.Message):
         text = BotText.get_receive_link_text()
         try:
             # raise pyrogram.errors.exceptions.FloodWait(10)
-            bot_msg: typing.Union[types.Message, typing.Coroutine] = await message.reply_text(text, quote=True)
+            bot_msg: typing.Union[types.Message, typing.Coroutine] = message.reply_text(text, quote=True)
         except pyrogram.errors.FloodWait as e:
             f = BytesIO()
             f.write(str(e).encode())
             f.write(b"Your job will be done soon. Just wait! Don't rush.")
             f.name = "Please don't flood me.txt"
-            bot_msg = await message.reply_document(
+            bot_msg = message.reply_document(
                 f, caption=f"Flood wait! Please wait {e.value} seconds...." f"Your job will start automatically", quote=True
             )
             f.close()
-            await client.send_message(OWNER, f"Flood wait! 🙁 {e.value} seconds....")
+            client.send_message(OWNER, f"Flood wait! 🙁 {e.value} seconds....")
             time.sleep(e.value)
-        await client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_VIDEO)
+        client.send_chat_action(chat_id, enums.ChatAction.UPLOAD_VIDEO)
         bot_msg.chat = message.chat
         if PREMIUM:
-            await ytdl_download_entrance(app_user, bot_msg, url)
+            ytdl_download_entrance(app_user, bot_msg, url)
         else:
-            await ytdl_download_entrance(client, bot_msg, url)
+            ytdl_download_entrance(client, bot_msg, url)
 
 
 @app.on_callback_query(filters.regex(r"document|video|audio"))
@@ -459,10 +459,10 @@ def download_resolution_callback(client: Client, callback_query: types.CallbackQ
 
 
 @app.on_callback_query(filters.regex(r"convert"))
-async def audio_callback(client: Client, callback_query: types.CallbackQuery):
+def audio_callback(client: Client, callback_query: types.CallbackQuery):
     if not ENABLE_FFMPEG:
         callback_query.answer("Audio conversion is disabled now.")
-        await callback_query.message.reply_text("Audio conversion is disabled now.")
+        callback_query.message.reply_text("Audio conversion is disabled now.")
         return
 
     callback_query.answer(f"Converting to audio...please wait patiently")
@@ -500,7 +500,7 @@ def periodic_sub_check():
 
 
 @app.on_raw_update()
-async def raw_update(client: Client, update, users, chats):
+def raw_update(client: Client, update, users, chats):
     payment = Payment()
     action = getattr(getattr(update, "message", None), "action", None)
     if update.QUALNAME == "types.UpdateBotPrecheckoutQuery":
@@ -515,7 +515,7 @@ async def raw_update(client: Client, update, users, chats):
         uid = update.message.peer_id.user_id
         amount = action.total_amount / 100
         payment.add_pay_user([uid, amount, action.charge.provider_charge_id, 0, amount * TOKEN_PRICE])
-        await client.send_message(uid, f"Thank you {uid}. Payment received: {amount} {action.currency}")
+        client.send_message(uid, f"Thank you {uid}. Payment received: {amount} {action.currency}")
 
 
 if __name__ == "__main__":

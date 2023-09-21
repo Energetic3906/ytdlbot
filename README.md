@@ -27,13 +27,13 @@ app = Client("ytdl-main", api_id=api_id, api_hash=api_hash, bot_token=bot_token,
 
 # Handle messages received by the bot client
 @app.on_message(filters.command(["info", "i"]))
-async def start_command(client: Client, message: Message):
+def start_command(client: Client, message: Message):
     if message.reply_to_message_id:
         # Reply to the message using the app_user client
-        await app_user.send_message(message.chat.id, str(message.reply_to_message))
+        app_user.send_message(message.chat.id, str(message.reply_to_message))
     else:
         # Reply to the message using the app_user client
-        await app_user.send_message(message.chat.id, str(message.from_user))
+        app_user.send_message(message.chat.id, str(message.from_user))
 
 # Start the app_user client
 app_user.run()

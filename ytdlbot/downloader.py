@@ -17,7 +17,7 @@ import time
 import traceback
 from io import StringIO
 from unittest.mock import MagicMock
-import asyncio
+
 import fakeredis
 import ffmpeg
 import ffpb
@@ -34,13 +34,13 @@ r = fakeredis.FakeStrictRedis()
 apply_log_formatter()
 
 
-async def edit_text(bot_msg, text: str):
+def edit_text(bot_msg, text: str):
     key = f"{bot_msg.chat.id}-{bot_msg.id}"
     # if the key exists, we shouldn't send edit message
     if not r.exists(key):
         time.sleep(random.random())
         r.set(key, "ok", ex=3)
-        await bot_msg.edit_text(text)
+        bot_msg.edit_text(text)
 
 
 def tqdm_progress(desc, total, finished, speed="", eta=""):
@@ -80,7 +80,7 @@ def remove_bash_color(text):
     return re.sub(r"\u001b|\[0;94m|\u001b\[0m|\[0;32m|\[0m|\[0;33m", "", text)
 
 
-async def download_hook(d: dict, bot_msg):
+def download_hook(d: dict, bot_msg):
     # since we're using celery, server location may be located in different continent.
     # Therefore, we can't trigger the hook very often.
     # the key is user_id + download_link
@@ -97,16 +97,16 @@ async def download_hook(d: dict, bot_msg):
         speed = remove_bash_color(d.get("_speed_str", "N/A"))
         eta = remove_bash_color(d.get("_eta_str", d.get("eta")))
         text = tqdm_progress("Downloading...", total, downloaded, speed, eta)
-        await edit_text(bot_msg, text)
+        edit_text(bot_msg, text)
         r.set(key, "ok", ex=5)
 
 
-async def upload_hook(current, total, bot_msg):
+def upload_hook(current, total, bot_msg):
     text = tqdm_progress("Uploading...", total, current)
-    await edit_text(bot_msg, text)
+    edit_text(bot_msg, text)
 
 
-async def convert_to_mp4(video_paths: list, bot_msg):
+def convert_to_mp4(video_paths: list, bot_msg):
     default_type = ["video/x-flv", "video/webm"]
     # all_converted = []
     for path in video_paths:
@@ -117,7 +117,7 @@ async def convert_to_mp4(video_paths: list, bot_msg):
                 logging.warning("Conversion abort for %s", bot_msg.chat.id)
                 bot_msg._client.send_message(bot_msg.chat.id, "Can't convert your video. ffmpeg has been disabled.")
                 break
-            await edit_text(bot_msg, f"{current_time()}: Converting {path.name} to mp4. Please wait.")
+            edit_text(bot_msg, f"{current_time()}: Converting {path.name} to mp4. Please wait.")
             new_file_path = path.with_suffix(".mp4")
             logging.info("Detected %s, converting to mp4...", mime)
             run_ffmpeg_progressbar(["ffmpeg", "-y", "-i", path, new_file_path], bot_msg)
@@ -132,10 +132,10 @@ class ProgressBar(tqdm):
         super().__init__(*args, **kwargs)
         self.bot_msg = self.b
 
-    async def update(self, n=1):
+    def update(self, n=1):
         super().update(n)
         t = tqdm_progress("Converting...", self.total, self.n)
-        await edit_text(self.bot_msg, t)
+        edit_text(self.bot_msg, t)
 
 
 def run_ffmpeg_progressbar(cmd_list: list, bm):
@@ -150,14 +150,14 @@ def can_convert_mp4(video_path, uid):
     return True
 
 
-async def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
+def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
     payment = Payment()
     chat_id = bm.chat.id
     hijack = kwargs.get("hijack")
     output = pathlib.Path(tempdir, "%(title).70s.%(ext)s").as_posix()
 
-    async def download_hook_wrapper(d, bm):
-        await download_hook(d, bm)
+    def download_hook_wrapper(d, bm):
+        download_hook(d, bm)
 
     ydl_opts = {
         "progress_hooks": [lambda d: download_hook_wrapper(d, bm)],
@@ -218,7 +218,7 @@ async def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
     settings = payment.get_user_settings(chat_id)
     if settings[2] == "video" or isinstance(settings[2], MagicMock):
         # only convert if send type is video
-        await convert_to_mp4(video_paths, bm)
+        convert_to_mp4(video_paths, bm)
     if settings[2] == "audio" or hijack == "bestaudio[ext=m4a]":
         convert_audio_format(video_paths, bm)
     # split_large_video(video_paths)
