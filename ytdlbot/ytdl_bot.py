@@ -17,7 +17,7 @@ import time
 import traceback
 import typing
 from io import BytesIO
-
+from pathlib import Path
 import pyrogram.errors
 import requests
 import yt_dlp
@@ -119,7 +119,7 @@ def private_use(func):
 def start_handler(client: Client, message: types.Message):
     payment = Payment()
     from_id = message.from_user.id
-    logging.info("Welcome to youtube-dl bot!")
+    logging.info("%s welcome to youtube-dl bot!", message.from_user.id)
     client.send_chat_action(from_id, enums.ChatAction.TYPING)
     is_old_user = payment.check_old_user(from_id)
     if is_old_user:
@@ -517,6 +517,13 @@ def raw_update(client: Client, update, users, chats):
         payment.add_pay_user([uid, amount, action.charge.provider_charge_id, 0, amount * TOKEN_PRICE])
         client.send_message(uid, f"Thank you {uid}. Payment received: {amount} {action.currency}")
 
+
+def temp_fix_The_msg_id_is_too_low():
+    current_dir = Path(__file__).parent
+    s_file_path = current_dir / "ytdl-main.session"
+    if os.path.exists(s_file_path):
+        print(f"Deleting session file :", s_file_path)
+        os.remove(s_file_path)
 
 if __name__ == "__main__":
     MySQL()
