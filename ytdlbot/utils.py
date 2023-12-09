@@ -16,6 +16,8 @@ import re
 import shutil
 import subprocess
 import tempfile
+import yt_dlp
+import requests
 import time
 import uuid
 from datetime import datetime
@@ -79,7 +81,7 @@ def adjust_formats(user_id: int, url: str, formats: list, hijack=None):
         formats.insert(0, "bestaudio[ext=m4a]")
 
 
-def get_metadata(video_path):
+def get_metadata(video_path,url):
     width, height, duration = 1280, 720, 0
     try:
         video_streams = ffmpeg.probe(video_path, select_streams="v")
@@ -90,8 +92,29 @@ def get_metadata(video_path):
     except Exception as e:
         logging.error(e)
     try:
-        thumb = pathlib.Path(video_path).parent.joinpath(f"{uuid.uuid4().hex}-thunmnail.png").as_posix()
-        ffmpeg.input(video_path, ss=duration / 2).filter("scale", width, -1).output(thumb, vframes=1).run()
+        ydl = yt_dlp.YoutubeDL()
+        logging.info("url-thumb: " + url)
+        info = ydl.extract_info(url, download=False)
+
+        
+        # 从视频信息中获取缩略图 URL
+        thumbnail_url = info.get("thumbnail")
+
+        if thumbnail_url:
+
+            # 使用 requests 下载缩略图
+            response = requests.get(thumbnail_url)
+            
+            # 保存缩略图到指定目录，文件名保持一致
+            thumbnail_filename = pathlib.Path(video_path).parent.joinpath(f"{uuid.uuid4().hex}-thunmnail.png").as_posix()
+            ffmpeg.input("pipe:").output(thumbnail_filename, vframes=1).run(input=response.content)
+            thumb = thumbnail_filename
+            logging.info("thumb-1 : " + thumb)
+        else:
+            # 如果无法获取缩略图 URL，使用 ffmpeg 截取
+            thumb = pathlib.Path(video_path).parent.joinpath(f"{uuid.uuid4().hex}-thunmnail.png").as_posix()
+            ffmpeg.input(video_path, ss=duration / 2).filter("scale", width, -1).output(thumb, vframes=1).run()
+            logging.info("thumb-2: " + thumb)
     except ffmpeg._run.Error:
         thumb = None
 

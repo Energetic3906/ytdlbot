@@ -427,7 +427,7 @@ def gen_cap(bm, url, video_path):
         user_info = ""
 
     if isinstance(video_path, pathlib.Path):
-        meta = get_metadata(video_path)
+        meta = get_metadata(video_path,url)
         file_name = video_path.name
         file_size = sizeof_fmt(os.stat(video_path).st_size)
     else:
