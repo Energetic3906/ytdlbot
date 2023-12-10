@@ -1,53 +1,18 @@
-version: '3.1'
-
+version: '3.7'
 services:
-  socat:
-    image: bennythink/socat
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    entrypoint: [ "socat", "tcp-listen:2375,fork,reuseaddr","unix-connect:/var/run/docker.sock" ]
-
-  redis:
-    image: redis:7-alpine
-    restart: always
-    logging:
-      driver: none
-
-  mysql:
-    image: ubuntu/mysql:8.0-22.04_beta
-    restart: always
-    volumes:
-      - ./db_data:/var/lib/mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: 'root'
-    logging:
-      driver: none
-
   ytdl:
-    image: bennythink/ytdlbot
-    env_file:
-      - env/ytdl.env
+    container_name: ytdl
+    image: povoma4617/ytdlbot:latest
+    environment:
+      # - APP_ID=
+      # - APP_HASH=
+      # - TOKEN=
+      - OWNER=
+      - AUTHORIZED_USER=
+      - ENABLE_ARIA2=True 
+      - PREMIUM=True # premium can upload videos larger than 2GB
+    volumes:
+      - /path/to/cookies:/app/conf # twitter_cookies.txt and instagram_cookies.txt
+      - /path/to/docker-session/my_account.session:/ytdlbot/ytdlbot/my_account.session
+      - /path/to/docker-session/ytdl-main.session:/ytdlbot/ytdlbot/ytdl-main.session
     restart: always
-    depends_on:
-      - socat
-      - redis
-    volumes:
-      - ./data/instagram.com_cookies.txt:/ytdlbot/ytdlbot/instagram.com_cookies.txt
-      - ./data/vnstat/:/var/lib/vnstat/
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-
-  flower:
-    image: bennythink/ytdlbot
-    env_file:
-      - env/ytdl.env
-    restart: unless-stopped
-    command: [ "/usr/local/bin/celery",
-               "-A", "flower_tasks", "flower",
-               "--basic_auth=benny:123456",
-               "--address=0.0.0.0", "--persistent","--purge_offline_workers=3600" ]
-    volumes:
-      - ./data/flower:/ytdlbot/ytdlbot/flower
-    ports:
-      - "127.0.0.1:15555:5555"
