@@ -92,10 +92,19 @@ def get_metadata(video_path,url):
     except Exception as e:
         logging.error(e)
     try:
-        ydl = yt_dlp.YoutubeDL()
         logging.info("url-thumb: " + url)
-        info = ydl.extract_info(url, download=False)
 
+        ydl_opts = {
+            'cookiefile': None,
+        }
+    
+        # Determine if the link is a Instagram link.
+        if "instagram.com" in url:
+            cookies_path = "/app/conf/instagram_cookies.txt"
+            ydl_opts["cookiefile"] = cookies_path
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
         
         # 从视频信息中获取缩略图 URL
         thumbnail_url = info.get("thumbnail")

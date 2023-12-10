@@ -26,7 +26,7 @@ import requests
 import yt_dlp as ytdl
 from tqdm import tqdm
 
-from config import AUDIO_FORMAT, ENABLE_ARIA2, ENABLE_FFMPEG, TG_MAX_SIZE, IPv6, SS_YOUTUBE
+from config import AUDIO_FORMAT, ENABLE_ARIA2, ENABLE_FFMPEG, TG_MAX_SIZE, IPv6
 from limit import Payment
 from utils import adjust_formats, apply_log_formatter, current_time, sizeof_fmt
 
@@ -182,8 +182,6 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
         None,
     ]
     adjust_formats(chat_id, url, formats, hijack)
-    if download_instagram(url, tempdir):
-        return list(pathlib.Path(tempdir).glob("*"))
 
     address = ["::", "0.0.0.0"] if IPv6 else [None]
     error = None
@@ -191,7 +189,12 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
     
     # Determine if the link is a Twitter link.
     if "twitter.com" in url:
-        cookies_path = "/app/conf/cookies.txt"
+        cookies_path = "/app/conf/twitter_cookies.txt"
+        ydl_opts["cookiefile"] = cookies_path
+    
+    # Determine if the link is a Instagram link.
+    if "instagram.com" in url:
+        cookies_path = "/app/conf/instagram_cookies.txt"
         ydl_opts["cookiefile"] = cookies_path
         
     for format_ in formats:
@@ -256,29 +259,6 @@ def convert_audio_format(video_paths: list, bm):
             video_paths[index] = new_path
 
 
-def download_instagram(url: str, tempdir: str):
-    if url.startswith("https://www.instagram.com"):
-        logging.info("Requesting instagram download link for %s", url)
-        api = SS_YOUTUBE + f"&url={url}"
-        res = requests.get(api).json()
-        if isinstance(res, dict):
-            downloadable = {i["url"]: i["ext"] for i in res["url"]}
-        else:
-            downloadable = {i["url"]: i["ext"] for item in res for i in item["url"]}
-
-        for link, ext in downloadable.items():
-            save_path = pathlib.Path(tempdir, f"{id(link)}.{ext}")
-            with open(save_path, "wb") as f:
-                f.write(requests.get(link, stream=True).content)
-        # telegram send webp as sticker, so we'll convert it to png
-        for path in pathlib.Path(tempdir).glob("*.webp"):
-            logging.info("Converting %s to png", path)
-            new_path = path.with_suffix(".jpg")
-            ffmpeg.input(path).output(new_path.as_posix()).run()
-            path.unlink()
-        return True
-
-
 def split_large_video(video_paths: list):
     original_video = None
     split = False
@@ -295,5 +275,4 @@ def split_large_video(video_paths: list):
 
 
 if __name__ == "__main__":
-    a = download_instagram("https://www.instagram.com/p/CrEAz-AI99Y/", "tmp")
-    print(a)
+    pass
