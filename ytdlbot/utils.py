@@ -103,6 +103,10 @@ def get_metadata(video_path,url):
             cookies_path = "/app/conf/instagram_cookies.txt"
             ydl_opts["cookiefile"] = cookies_path
         
+        if "twitter.com" in url:
+            cookies_path = "/app/conf/twitter_cookies.txt"
+            ydl_opts["cookiefile"] = cookies_path
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
         
