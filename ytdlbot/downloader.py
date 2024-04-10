@@ -165,6 +165,7 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
         "restrictfilenames": False,
         "quiet": True,
     }
+    ydl_opts["merge_output_format"] = "mp4"
     if ENABLE_ARIA2:
         ydl_opts["external_downloader"] = "aria2c"
         ydl_opts["external_downloader_args"] = [
@@ -178,7 +179,7 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
         # webm and av01 are not streamable on telegram, so we'll extract mp4 and not av01 codec
         # "bestvideo[ext=mp4][vcodec!*=av01]+bestaudio[ext=m4a]/bestvideo+bestaudio",
         # "bestvideo[vcodec^=avc]+bestaudio[acodec^=mp4a]/best[vcodec^=avc]/best",
-        "best[ext!=webm]+bestaudio/best", 
+        "'bestvideo+bestaudio/best", 
         None,
     ]
     adjust_formats(chat_id, url, formats, hijack)
