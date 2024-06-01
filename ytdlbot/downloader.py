@@ -189,7 +189,7 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
     video_paths = None
     
     # Determine if the link is a Twitter link.
-    if "twitter.com" in url:
+    if "twitter.com" in url or "x.com" in url:
         cookies_path = "/app/conf/twitter_cookies.txt"
         ydl_opts["cookiefile"] = cookies_path
     
