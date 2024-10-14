@@ -106,6 +106,10 @@ def get_metadata(video_path,url):
         if "twitter.com" in url or "x.com" in url:
             cookies_path = "/app/conf/twitter_cookies.txt"
             ydl_opts["cookiefile"] = cookies_path
+        
+        if "youtu.be" in url or "youtube.com" in url:
+            cookies_path = "/app/conf/youtube_cookies.txt"
+            ydl_opts["cookiefile"] = cookies_path
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)

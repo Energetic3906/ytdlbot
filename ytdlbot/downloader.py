@@ -197,7 +197,12 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
     if "instagram.com" in url:
         cookies_path = "/app/conf/instagram_cookies.txt"
         ydl_opts["cookiefile"] = cookies_path
-        
+    
+    # Determine if the link is a Instagram link.
+    if "youtu.be" in url or "youtube.com" in url:
+        cookies_path = "/app/conf/youtube_cookies.txt"
+        ydl_opts["cookiefile"] = cookies_path
+
     for format_ in formats:
         ydl_opts["format"] = format_
         for addr in address:
