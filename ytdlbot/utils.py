@@ -111,6 +111,10 @@ def get_metadata(video_path,url):
             cookies_path = "/app/conf/youtube_cookies.txt"
             ydl_opts["cookiefile"] = cookies_path
 
+        if "b23.tv" in url or "bilibili.com" in url:
+            cookies_path = "/app/conf/bilibili_cookies.txt"
+            ydl_opts["cookiefile"] = cookies_path
+            
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
         

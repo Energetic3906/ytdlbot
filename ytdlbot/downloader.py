@@ -204,6 +204,10 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
         cookies_path = "/app/conf/youtube_cookies.txt"
         ydl_opts["cookiefile"] = cookies_path
 
+    if "b23.tv" in url or "bilibili.com" in url:
+        cookies_path = "/app/conf/bilibili_cookies.txt"
+        ydl_opts["cookiefile"] = cookies_path
+
     for format_ in formats:
         ydl_opts["format"] = format_
         for addr in address:
