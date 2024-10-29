@@ -188,25 +188,15 @@ def ytdl_download(url: str, tempdir: str, bm, **kwargs) -> list:
     address = ["::", "0.0.0.0"] if IPv6 else [None]
     error = None
     video_paths = None
-    
-    # Determine if the link is a Twitter link.
-    if "twitter.com" in url or "x.com" in url:
-        cookies_path = "/app/conf/twitter_cookies.txt"
-        ydl_opts["cookiefile"] = cookies_path
-    
-    # Determine if the link is a Instagram link.
-    if "instagram.com" in url:
-        cookies_path = "/app/conf/instagram_cookies.txt"
-        ydl_opts["cookiefile"] = cookies_path
-    
-    # Determine if the link is a Instagram link.
-    if "youtu.be" in url or "youtube.com" in url:
-        cookies_path = "/app/conf/youtube_cookies.txt"
-        ydl_opts["cookiefile"] = cookies_path
 
-    if "b23.tv" in url or "bilibili.com" in url:
-        cookies_path = "/app/conf/bilibili_cookies.txt"
-        ydl_opts["cookiefile"] = cookies_path
+    # Check whether the URL is configured with the corresponding cookies.
+    cookie_paths = {key.split('_')[0].lower(): value for key, value in os.environ.items() if key.endswith('_COOKIES')}
+
+    for domain, path in cookie_paths.items(): 
+        if domain in url: 
+            ydl_opts["cookiefile"] = path
+            logging.info(f"Using cookie file for {domain}: {path}")
+            break
 
     for format_ in formats:
         ydl_opts["format"] = format_
