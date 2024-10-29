@@ -47,3 +47,5 @@ Put these two session files in a folder and also place the files from the `ytdlb
 ```shell
 docker stop ytdl && docker rm ytdl && docker run --name ytdl -d -e APP_ID=<YOUR_APP_ID> -e APP_HASH=<YOUR_APP_HASH> -e TOKEN=<YOUR_TOKEN> -e PREMIUM=True -e ENABLE_ARIA2=True -v /root/ytdlbot/conf:/app/conf -v /root/ytdlbot/session:/ytdlbot/ytdlbot --restart=always povoma4617/ytdlbot:latest
 ```
+
+If you want to use cookies for downloading, configure using [docker-compose.yml](docker-compose.yml). For detailed configuration, refer to the YAML file.

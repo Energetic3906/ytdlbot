@@ -7,10 +7,18 @@ services:
       # - APP_ID=
       # - APP_HASH=
       # - TOKEN=
-      - OWNER=
-      - AUTHORIZED_USER=
-      - ENABLE_ARIA2=True 
-      - PREMIUM=True # premium can upload videos larger than 2GB
+      OWNER: "number"
+      AUTHORIZED_USER: "number"
+      ENABLE_ARIA2: "True"
+      PREMIUM: "True"
+      ENABLE_FFMPEG: "True"
+      TWITTER_COOKIES: "/app/conf/twitter_cookies.txt"
+      X_COM_COOKIES: "/app/conf/twitter_cookies.txt" 
+      INSTAGRAM_COOKIES: "/app/conf/instagram_cookies.txt"
+      YOUTUBE_COOKIES: "/app/conf/youtube_cookies.txt"
+      YOUTU_BE_COOKIES: "/app/conf/youtube_cookies.txt"
+      BILIBILI_COOKIES: "/app/conf/bilibili_cookies.txt" 
+      B23_COOKIES: "/app/conf/bilibili_cookies.txt"
     volumes:
       - /path/to/cookies:/app/conf # twitter_cookies.txt and instagram_cookies.txt
       - /path/to/docker-session/my_account.session:/ytdlbot/ytdlbot/my_account.session
