@@ -1,8 +1,6 @@
 name: Docker Image Builder
 on:
   push:
-    branches:
-      - 'master'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -36,17 +34,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Lower case for Docker Hub
-        id: dh_string
-        uses: ASzc/change-string-case-action@v5
-        with:
-          string: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
+      - name: Set Docker image name
+        id: docker_image
+        run: |
+          DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')"
+          echo "image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.dh_string.outputs.lowercase }}
+          images: ${{ steps.docker_image.outputs.image }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
             type=ref,event=tag
